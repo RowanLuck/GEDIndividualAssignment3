@@ -116,21 +116,13 @@ public class Movement : MonoBehaviour
             // Bools for movement and animation
             wallGrab = true;
             wallSlide = false;
-        }
+        }   
 
         // Used when no longer on a wall
         if (Input.GetButtonUp("Fire2") || !coll.onWall || !canMove)
         {
             wallGrab = false;
             wallSlide = false;
-        }
-
-        // When on the ground and not dashing
-        // You might want to move these to a state
-        if (coll.onGround && !isDashing)
-        {
-            wallJumped = false;
-            GetComponent<BetterJumping>().enabled = true;
         }
 
         // Jump when hitting the space bar
@@ -143,14 +135,6 @@ public class Movement : MonoBehaviour
         if (Input.GetButtonDown("Fire1") && !hasDashed)
         {
             currentState = PlayerState.DASHING;
-        }
-
-        // When you land on the ground
-        if (coll.onGround && !groundTouch)
-        {   
-            // GroundTouch() resets the dash, as you can only dash once per jump
-            GroundTouch();
-            groundTouch = true;
         }
 
         // When you have left the ground
@@ -187,16 +171,32 @@ public class Movement : MonoBehaviour
         {
             case PlayerState.IDLE:
 
-                // If not on the wall and on the ground
-                if (!coll.onWall || coll.onGround)
-                    wallSlide = false;
-
                 // Condition: Horizontal input, go to RUNNING state
                 if (xInput > 0.01f || xInput < -0.01f)
                 {
                     currentState = PlayerState.RUNNING;
                 }
 
+                // When on the ground and not on a wall
+                if (!coll.onWall || coll.onGround)
+                    wallSlide = false;
+
+
+                // When on the ground and not dashing
+                if (coll.onGround && !isDashing)
+                {
+                    wallJumped = false;
+                    GetComponent<BetterJumping>().enabled = true;
+                }
+                
+                // When you land on the ground
+                if (coll.onGround && !groundTouch)
+                {
+                    // GroundTouch() resets the dash, as you can only dash once per jump
+                    GroundTouch();
+                    groundTouch = true;
+                }
+                
                 break;
 
             case PlayerState.RUNNING:
@@ -211,7 +211,7 @@ public class Movement : MonoBehaviour
                     currentState = PlayerState.IDLE;
                 }
 
-            break;
+                break;
             
             case PlayerState.CLIMBING:
             
@@ -238,37 +238,48 @@ public class Movement : MonoBehaviour
                     rb.gravityScale = 3;
                 }
         
-            break;
+                break;
+            
+            // STATE EXPANSION BEGINS HERE
+
+            // New state: ON_WALL
 
             case PlayerState.ON_WALL:
 
-            // When on the wall and not on the ground
-            if(coll.onWall && !coll.onGround)
-            {
-                // If the player is moving towards the wall
-                if (xInput != 0 && !wallGrab)
-                {   
-                    // Slide down the wall
-                    wallSlide = true;
-                    WallSlide();
+                // When on the wall and not on the ground
+                if(coll.onWall && !coll.onGround)
+                {
+                    // If the player is moving towards the wall
+                    if (xInput != 0 && !wallGrab)
+                    {   
+                        // Slide down the wall
+                        wallSlide = true;
+                        WallSlide();
+                    }
+
+                    WallJump();
+
                 }
 
-                WallJump();
+                break;
 
-            }
-
-            break;
+            // New state: JUMPING
 
             case PlayerState.JUMPING:
 
+                // Activates jump animation
                 anim.SetTrigger("jump");
 
+                // Sets jumping to false if player collides with ground
                 if (coll.onGround)
                     Jump(Vector2.up, false);
 
+                // Switches player's state back to idle
                 currentState = PlayerState.IDLE;
 
-            break;
+                break;
+
+            // New state: DASHING
 
             case PlayerState.DASHING:
 
@@ -278,11 +289,13 @@ public class Movement : MonoBehaviour
                     // Dash using raw input values
                     Dash(xRaw, yRaw);
 
+                // Switches player's state back to idle
                 currentState = PlayerState.IDLE;
 
-            break;
+                break;
 
-            // More states here pls
+            // STATE EXPANSION ENDS HERE
+
         }
     }
 
